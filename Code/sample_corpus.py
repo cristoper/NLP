@@ -41,5 +41,5 @@ train_f.close()
 test_f.close()
 
 # report
-print("Wrote %d lines to %s" % (keep_count, train_path))
-print("Wrote %d lines to %s" % (test_count, test_path))
+print("Wrote %d sentences to %s" % (keep_count, train_path))
+print("Wrote %d sentences to %s" % (test_count, test_path))
