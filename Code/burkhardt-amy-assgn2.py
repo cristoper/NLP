@@ -323,8 +323,6 @@ def read_in_print_out(df, transitions, observations, vocabulary, path, name):
 
     predicted = df.to_csv("{}burkhardt-amy-assign2-{}-output.txt".format(path,name), sep='\t', index=False, header=False)
 
-    return predicted
-
 
 def sampling(corpus_path):
     """
