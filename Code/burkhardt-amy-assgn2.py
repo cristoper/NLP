@@ -1,5 +1,5 @@
 """
-This script contains all of the files necessary to predict POS tags (includes sampling and baseline computations).
+This script contains all of the functions necessary to predict POS tags (includes sampling and baseline computations).
 Example code for how to call these functions to produce results is presented in the second part of the report entitled
 burkhardt-amy-asgn2-report.pdf
 """
