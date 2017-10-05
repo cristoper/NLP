@@ -1,8 +1,14 @@
 """
 This script contains all of the functions necessary to predict POS tags (includes sampling and baseline computations).
+This script is executable with the following unix command line:
+
+python burkhardt-amy-assgn2.py Data/berp-POS-training.txt Data/testset.txt > burkhardt-amy-assgn2-test-output.txt
+
 Example code for how to call these functions to produce results is presented in the second part of the report entitled
 burkhardt-amy-asgn2-report.pdf
 """
+import sys
+import math
 import pandas as pd
 import numpy as np
 from random import random
@@ -110,7 +116,7 @@ def compute_transition_matrix (tags, bigram_counts, unigram_counts, k):
                  numerator = bigram_counts[pair] + k
             except:
                  numerator = k
-            transition.append(numerator / denominator)
+            transition.append(math.log2(numerator / denominator))
 
 
     # then compute everything else
@@ -126,14 +132,14 @@ def compute_transition_matrix (tags, bigram_counts, unigram_counts, k):
                 numerator = bigram_counts[pair] + k
             except:
                 numerator = k
-            transition.append(numerator / denominator)
+            transition.append(math.log2(numerator / denominator))
 
     transition = np.array(transition)
     tran_matrix = transition.reshape(len(tags)+1, len(tags))
     return tran_matrix
 
 
-def compute_observation_matrix (tags, vocabulary, bigram_counts, unigram_counts):
+def compute_observation_matrix (tags, vocabulary, bigram_counts, unigram_counts, k):
     """
     Compute probabilities for the observation matrix (tags, vocabulary)
 
@@ -152,13 +158,13 @@ def compute_observation_matrix (tags, vocabulary, bigram_counts, unigram_counts)
         for y in vocabulary:
             pair = (y, x)
             try:
-                denominator = unigram_counts[x] + len(vocabulary)
+                denominator = unigram_counts[x] + k *len(vocabulary)
             except:
-                 denominator = len(vocabulary)
+                 denominator = k*len(vocabulary)
             try:
-                 numerator = bigram_counts[pair] + 1
-            except: numerator = 1
-            observations.append(numerator / denominator)
+                 numerator = bigram_counts[pair] + k
+            except: numerator = k
+            observations.append(math.log2(numerator / denominator))
 
     observations = np.array(observations)
     obs_matrix = observations.reshape(len(tags),len(vocabulary))
@@ -183,7 +189,7 @@ def viterbi (transition, observations, events):
 
     # initialization step
     for s in range(n_states):
-        v[s,0] = transition[0,s] * observations[s, events[0]]
+        v[s,0] = transition[0,s] + observations[s, events[0]]
 
     # induction step
     for t in range (1, n_events):
@@ -193,7 +199,7 @@ def viterbi (transition, observations, events):
                 prev_t = v[s_prime, t-1]
                 tran_s_prime_to_s = transition[s_prime + 1, s]
                 obser_s_given_t = observations[s, events[t]]
-                tmp.append(prev_t * tran_s_prime_to_s * obser_s_given_t) # still need to changet thos to adding logs
+                tmp.append(prev_t + tran_s_prime_to_s + obser_s_given_t) # adding because all probabilities are in logs
             # now that all interim probabilities have been computed for given state, get max
             # and also store the index of the argmax
             v[s,t] = max(tmp) # log will be negative; so insetad of
@@ -254,17 +260,13 @@ def get_transition (df, k=1):
     bigram_tag_counts = ngram_dict(df, "tag_tag")
     unigram_tag_counts = ngram_dict(df, "tag")
     transitions = compute_transition_matrix(tags, bigram_tag_counts, unigram_tag_counts, k)
-    print("confirm that rows of transition table sum closely to 1")
-    print(np.sum(transitions, axis=1))
     return transitions
 
 
-def get_observation (df, vocabulary):
+def get_observation (df, vocabulary, k=1):
     bigram_counts = ngram_dict(df, "tag_word")
     unigram_counts = ngram_dict(df, "tag")
-    observations = compute_observation_matrix(tags, vocabulary, bigram_counts, unigram_counts)
-    print("confirm that rows of observation table sum closely to 1")
-    print(np.sum(observations, axis=1))
+    observations = compute_observation_matrix(tags, vocabulary, bigram_counts, unigram_counts, k)
     return observations
 
 
@@ -321,8 +323,8 @@ def read_in_print_out(df, transitions, observations, vocabulary, path, name):
     pos = pd.DataFrame({'col':flat_list})
     df['tag'] = pos
 
-    predicted = df.to_csv("{}burkhardt-amy-assign2-{}-output.txt".format(path,name), sep='\t', index=False, header=False)
-
+    #df.to_csv("{}burkhardt-amy-assign2-{}-output.txt".format(path,name), sep='\t', index=False, header=False)
+    return df
 
 def sampling(corpus_path):
     """
@@ -396,4 +398,25 @@ def baseline_accuracy(df, lookup):
     df['accuracy'] = df.apply(lambda x: 1 if x.tag == x.predicted_tag else 0, axis=1)
     print("the accuracy is:")
     print(df['accuracy'].mean())
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Missing arguments.")
+        print("Usage: burkhardt-amy-assgn2.py trainingfile.txt testfile.txt > burkhardt-amy-assgn2-test-output.txt")
+
+    else:
+        training_filename = sys.argv[1]
+        testing_filename = sys.argv[2]
+
+        train = get_data(training_filename)  # either random sample or all data
+        test = get_data(testing_filename)
+        vocabulary = get_vocabulary(train, min_freq=2)
+        transition = get_transition(train, k=.01)
+        observation = get_observation(train, vocabulary, k=.01)
+        pd.set_option('display.max_rows', -1)
+        results = read_in_print_out(test, transition, observation, vocabulary, path ="Data/", name = 'test2')
+        print(results.to_csv(sep='\t',index=False, header=False))
+
+
+
 
