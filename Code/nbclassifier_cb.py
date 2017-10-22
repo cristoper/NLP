@@ -58,7 +58,6 @@ class NBClassifier:
                 self.logprior[cat] = sys.float_info.min_exp
             else:
                 self.logprior[cat] = math.log(Nc/self.Ndoc)
-            self.logprior[cat] = math.log(0.5)
 
             # get and count the bag of words for all documents in cat
             word_counts = Counter(self.catdict[cat])
@@ -66,7 +65,6 @@ class NBClassifier:
 
             # calculate log liklihoods for each word given cat
             # (Uses +1 smoothing)
-            print(totals+len(self.V))
             for word in self.V:
                 count = word_counts[word] + 1
                 self.logliklihood[(word, cat)] = math.log(count/(totals+len(self.V)))
